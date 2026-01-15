@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// ENUMS
+// =========================
+
+enum UserRole {
+  ADMIN
+  STUDENT
+  TEACHER
+}
+
+enum AdmissionStatus {
+  REGISTERED
+  VERIFIED
+  APPROVED
+  REJECTED
+  SEAT_CONFIRMED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+// =========================
+// AUTH USER (BASE) - Better Auth Compatible
+// =========================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String
+  image         String?
+  role          UserRole
+  isActive      Boolean   @default(true)
+  banned        Boolean   @default(false)
+
+  admin         Admin?
+  student       Student?
+  teacher       Teacher?
+
+  sessions      Session[]
+  accounts      Account[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Better Auth - Session Management
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Better Auth - OAuth Accounts (optional)
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  accountId         String
+  providerId        String
+  accessToken       String?
+  refreshToken      String?
+  idToken           String?
+  expiresAt         DateTime?
+  password          String?
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+}
+
+// Better Auth - Email Verification
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+}
+
+// =========================
+// ADMIN
+// =========================
+
+model Admin {
+  id        String @id @default(uuid())
+  userId    String @unique
+  name      String
+
+  user      User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// =========================
+// DEPARTMENT & SUBJECT
+// =========================
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+
+  subjects  Subject[]
+  students  Student[]
+  teachers  Teacher[]
+  admissions AdmissionApplication[]
+
+  createdAt DateTime @default(now())
+}
+
+model Subject {
+  id           String     @id @default(uuid())
+  name         String
+  departmentId String
+  semester     Int
+
+  department   Department @relation(fields: [departmentId], references: [id])
+  teachers     TeacherSubject[]
+  marks        InternalMark[]
+  attendance   Attendance[]
+
+  createdAt    DateTime @default(now())
+}
+
+// =========================
+// TEACHER
+// =========================
+
+model Teacher {
+  id           String @id @default(uuid())
+  userId       String @unique
+  name         String
+  phone        String?
+  departmentId String
+
+  user         User       @relation(fields: [userId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  subjects     TeacherSubject[]
+  attendance   Attendance[]
+
+  createdAt    DateTime @default(now())
+}
+
+model TeacherSubject {
+  id        String  @id @default(uuid())
+  teacherId String
+  subjectId String
+
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([teacherId, subjectId])
+}
+
+// =========================
+// STUDENT
+// =========================
+
+model Student {
+  id           String @id @default(uuid())
+  userId       String @unique
+  rollNumber   String @unique
+  name         String
+  phone        String?
+  departmentId String
+  semester     Int
+
+  user         User       @relation(fields: [userId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  attendance   Attendance[]
+  marks        InternalMark[]
+  payments     Payment[]
+
+  createdAt    DateTime @default(now())
+}
+
+// =========================
+// ATTENDANCE
+// =========================
+
+model Attendance {
+  id        String   @id @default(uuid())
+  date      DateTime
+  status    Boolean
+
+  studentId String
+  teacherId String
+  subjectId String
+
+  student   Student @relation(fields: [studentId], references: [id])
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([date, studentId, subjectId])
+}
+
+// =========================
+// INTERNAL MARKS
+// =========================
+
+model InternalMark {
+  id        String  @id @default(uuid())
+  marks     Float
+
+  studentId String
+  subjectId String
+
+  student   Student @relation(fields: [studentId], references: [id])
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([studentId, subjectId])
+}
+
+// =========================
+// PAYMENTS
+// =========================
+
+model Payment {
+  id          String        @id @default(uuid())
+  amount      Float
+  status      PaymentStatus
+  type        String        // HOSTEL / COLLEGE
+  receiptUrl  String?
+
+  studentId   String
+  student     Student @relation(fields: [studentId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+// =========================
+// ADMISSION (NEW APPLICANT)
+// =========================
+
+model AdmissionApplication {
+  id            String           @id @default(uuid())
+  name          String
+  email         String
+  phone         String
+  departmentId  String
+  status        AdmissionStatus  @default(REGISTERED)
+  qrCode        String           @unique
+
+  department    Department @relation(fields: [departmentId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
