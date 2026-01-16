@@ -133,7 +133,7 @@ const generateVerificationEmailHTML = (verificationCode: string) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dw47ib0sh/image/upload/v1764077429/mydzalimrmzbscn0bmue.png" alt="GCEK Logo" class="GCEK-logo" />
+            <img src="https://res.cloudinary.com/dw47ib0sh/image/upload/v1768564619/goswpali83orrjkljbqk.png" alt="GCEK Logo" class="GCEK-logo" />
             <h1>Please verify your identity for <strong>CUMS - GCEK Bhawanipatna</strong></h1>
         </div>
         
