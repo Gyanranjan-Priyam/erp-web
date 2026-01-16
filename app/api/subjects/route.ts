@@ -37,3 +37,51 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+// POST - Create new subject
+export async function POST(request: Request) {
+  try {
+    await requireRole(["ADMIN"])
+
+    const body = await request.json()
+    const { name, code, category, semester, departmentId } = body
+
+    if (!name || typeof name !== "string") {
+      return NextResponse.json(
+        { error: "Subject name is required" },
+        { status: 400 }
+      )
+    }
+
+    if (!semester || typeof semester !== "number") {
+      return NextResponse.json(
+        { error: "Semester is required" },
+        { status: 400 }
+      )
+    }
+
+    if (!departmentId || typeof departmentId !== "string") {
+      return NextResponse.json(
+        { error: "Department ID is required" },
+        { status: 400 }
+      )
+    }
+
+    const subject = await prisma.subject.create({
+      data: {
+        name: name.trim(),
+        semester,
+        departmentId,
+      },
+    })
+
+    return NextResponse.json(subject, { status: 201 })
+  } catch (error: any) {
+    console.error("Error creating subject:", error)
+
+    return NextResponse.json(
+      { error: "Failed to create subject" },
+      { status: 500 }
+    )
+  }
+}
