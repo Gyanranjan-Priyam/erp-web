@@ -46,7 +46,9 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, code, category, semester, departmentId } = body
 
-    if (!name || typeof name !== "string") {
+    const trimmedName = typeof name === "string" ? name.trim() : ""
+
+    if (!trimmedName) {
       return NextResponse.json(
         { error: "Subject name is required" },
         { status: 400 }
@@ -67,9 +69,14 @@ export async function POST(request: Request) {
       )
     }
 
+    const trimmedCode = typeof code === "string" ? code.trim() : undefined
+    const trimmedCategory = typeof category === "string" ? category.trim() : undefined
+
     const subject = await prisma.subject.create({
       data: {
-        name: name.trim(),
+        name: trimmedName,
+        code: trimmedCode,
+        category: trimmedCategory,
         semester,
         departmentId,
       },

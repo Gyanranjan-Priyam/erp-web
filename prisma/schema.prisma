@@ -125,7 +125,7 @@ model Admin {
 model Department {
   id        String   @id @default(uuid())
   name      String   @unique
-  code      String   @unique
+  code      String?  @unique
 
   subjects  Subject[]
   students  Student[]

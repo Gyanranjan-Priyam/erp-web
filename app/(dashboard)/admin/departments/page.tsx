@@ -554,7 +554,7 @@ const Departments = () => {
             <AlertDialogCancel disabled={submitting} className="w-full sm:w-auto">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={submitting}
+              disabled={submitting || Boolean(selectedDepartment?._count?.students || selectedDepartment?._count?.teachers || selectedDepartment?._count?.subjects)}
               className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {submitting ? "Deleting..." : "Delete"}

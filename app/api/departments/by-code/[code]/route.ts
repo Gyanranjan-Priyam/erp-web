@@ -40,8 +40,17 @@ export async function GET(
     }
 
     return NextResponse.json(department)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching department:", error)
+    
+    // Handle auth errors
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json(
+        { error: error.message || "Unauthorized" },
+        { status: error.status }
+      )
+    }
+    
     return NextResponse.json(
       { error: "Failed to fetch department" },
       { status: 500 }

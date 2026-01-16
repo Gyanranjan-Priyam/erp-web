@@ -61,14 +61,17 @@ export async function PATCH(
     const body = await request.json()
     const { name, code } = body
 
-    if (!name || typeof name !== "string") {
+    const trimmedName = name?.trim()
+    const trimmedCode = code?.trim()
+
+    if (!trimmedName || typeof trimmedName !== "string") {
       return NextResponse.json(
         { error: "Department name is required" },
         { status: 400 }
       )
     }
 
-    if (!code || typeof code !== "string") {
+    if (!trimmedCode || typeof trimmedCode !== "string") {
       return NextResponse.json(
         { error: "Department code is required" },
         { status: 400 }
@@ -80,8 +83,8 @@ export async function PATCH(
         id: id,
       },
       data: {
-        name: name.trim(),
-        code: code.trim().toUpperCase(),
+        name: trimmedName,
+        code: trimmedCode.toUpperCase(),
       },
     })
 

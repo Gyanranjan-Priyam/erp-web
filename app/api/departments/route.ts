@@ -37,17 +37,43 @@ export async function POST(request: Request) {
   try {
     await requireRole(["ADMIN"])
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      )
+    }
+
     const { name, code } = body
 
-    if (!name || typeof name !== "string") {
+    if (typeof name !== "string") {
+      return NextResponse.json(
+        { error: "Department name must be a string" },
+        { status: 400 }
+      )
+    }
+
+    if (typeof code !== "string") {
+      return NextResponse.json(
+        { error: "Department code must be a string" },
+        { status: 400 }
+      )
+    }
+
+    const trimmedName = name.trim()
+    const trimmedCode = code.trim()
+
+    if (!trimmedName) {
       return NextResponse.json(
         { error: "Department name is required" },
         { status: 400 }
       )
     }
 
-    if (!code || typeof code !== "string") {
+    if (!trimmedCode) {
       return NextResponse.json(
         { error: "Department code is required" },
         { status: 400 }
@@ -56,8 +82,8 @@ export async function POST(request: Request) {
 
     const department = await prisma.department.create({
       data: {
-        name: name.trim(),
-        code: code.trim().toUpperCase(),
+        name: trimmedName,
+        code: trimmedCode.toUpperCase(),
       },
     })
 

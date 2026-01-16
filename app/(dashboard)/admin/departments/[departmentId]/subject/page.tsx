@@ -134,7 +134,13 @@ const AddSubjectPage = () => {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      // Clear the input even if no file selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
 
     const fileExtension = file.name.split('.').pop()?.toLowerCase()
     
@@ -144,6 +150,11 @@ const AddSubjectPage = () => {
       parseExcel(file)
     } else {
       toast.error("Please upload a CSV or Excel file")
+    }
+
+    // Clear the input to allow re-selecting the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -248,12 +259,21 @@ const AddSubjectPage = () => {
 
   const handleBulkUpload = async () => {
     // Validate all subjects
+    const allowedCategories = ["core", "elective", "practical", "project", "lab"]
     const invalidSubjects = bulkSubjects.filter(
       s => !s.name || !s.code || !s.category || !s.year || !s.semester
+    )
+    const invalidCategories = bulkSubjects.filter(
+      s => s.category && !allowedCategories.includes(s.category.toLowerCase())
     )
 
     if (invalidSubjects.length > 0) {
       toast.error(`${invalidSubjects.length} subject(s) have missing required fields`)
+      return
+    }
+
+    if (invalidCategories.length > 0) {
+      toast.error(`${invalidCategories.length} subject(s) have invalid category values. Allowed: core, elective, practical, project, lab`)
       return
     }
 
@@ -279,6 +299,11 @@ const AddSubjectPage = () => {
             semester: parseInt(subject.semester),
             departmentId: department.id,
           }),
+        }).then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`)
+          }
+          return res
         })
       )
 

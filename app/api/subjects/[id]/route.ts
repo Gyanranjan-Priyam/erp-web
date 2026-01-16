@@ -27,8 +27,17 @@ export async function GET(
     }
 
     return NextResponse.json(subject)
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching subject:", error)
+    
+    // Handle auth errors
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json(
+        { error: error.message || "Unauthorized" },
+        { status: error.status }
+      )
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch subject" },
       { status: 500 }
@@ -45,7 +54,17 @@ export async function PATCH(
     await requireRole(["ADMIN"])
 
     const { id } = await params
-    const body = await request.json()
+    
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      return NextResponse.json(
+        { error: "Invalid JSON in request body" },
+        { status: 400 }
+      )
+    }
+
     const { name, code, category, semester } = body
 
     if (!name?.trim()) {
@@ -55,11 +74,15 @@ export async function PATCH(
       )
     }
 
-    if (semester && (semester < 1 || semester > 8)) {
-      return NextResponse.json(
-        { error: "Semester must be between 1 and 8" },
-        { status: 400 }
-      )
+    let semesterNum: number | undefined
+    if (semester !== undefined) {
+      semesterNum = typeof semester === 'number' ? semester : parseInt(semester, 10)
+      if (isNaN(semesterNum) || semesterNum < 1 || semesterNum > 8) {
+        return NextResponse.json(
+          { error: "Semester must be a number between 1 and 8" },
+          { status: 400 }
+        )
+      }
     }
 
     const subject = await prisma.subject.update({
@@ -68,13 +91,21 @@ export async function PATCH(
         name: name.trim(),
         code: code?.trim().toUpperCase(),
         category: category?.trim(),
-        semester: semester ? parseInt(semester) : undefined,
+        semester: semesterNum,
       },
     })
 
     return NextResponse.json(subject)
   } catch (error: any) {
     console.error("Error updating subject:", error)
+    
+    // Handle auth errors
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json(
+        { error: error.message || "Unauthorized" },
+        { status: error.status }
+      )
+    }
     
     if (error.code === "P2025") {
       return NextResponse.json(
@@ -107,6 +138,14 @@ export async function DELETE(
     return NextResponse.json({ message: "Subject deleted successfully" })
   } catch (error: any) {
     console.error("Error deleting subject:", error)
+    
+    // Handle auth errors
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json(
+        { error: error.message || "Unauthorized" },
+        { status: error.status }
+      )
+    }
     
     if (error.code === "P2025") {
       return NextResponse.json(
