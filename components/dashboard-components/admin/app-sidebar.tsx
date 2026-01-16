@@ -2,21 +2,19 @@
 
 import * as React from "react"
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
+  IconChalkboardTeacher,
   IconDatabase,
-  IconFileAi,
-  IconFileDescription,
   IconFileWord,
-  IconFolder,
-  IconHelp,
+  IconCoinRupeeFilled,
   IconInnerShadowTop,
-  IconListDetails,
+  IconLayoutDashboardFilled,
   IconReport,
   IconSearch,
+  IconCalendarMonth,
   IconSettings,
-  IconUsers,
+  IconSchool,
+  IconUser,
+  IconUsersPlus
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/dashboard-components/admin/nav-documents"
@@ -42,45 +40,45 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
-      icon: IconDashboard,
+      url: "/admin",
+      icon: IconLayoutDashboardFilled,
     },
     {
       title: "Students",
-      url: "#",
-      icon: IconListDetails,
+      url: "/admin/students",
+      icon: IconSchool,
     },
     {
       title: "Faculties",
-      url: "#",
-      icon: IconChartBar,
+      url: "/admin/faculties",
+      icon: IconUser,
     },
     {
       title: "Departments",
-      url: "#",
-      icon: IconFolder,
+      url: "/admin/departments",
+      icon: IconChalkboardTeacher,
     },
     {
       title: "Class Schedules",
-      url: "#",
-      icon: IconFolder,
+      url: "/admin/schedule",
+      icon: IconCalendarMonth,
     },
     {
       title: "Payment",
-      url: "#",
-      icon: IconUsers,
+      url: "/admin/payment",
+      icon: IconCoinRupeeFilled,
     },
     {
       title: "Admissions",
-      url: "#",
-      icon: IconUsers,
+      url: "/admin/admissions",
+      icon: IconUsersPlus,
     },
   ],
 
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/admin/settings",
       icon: IconSettings,
     },
     {
@@ -120,7 +118,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <a href="#">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">CUMS GCE Kalahandi</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

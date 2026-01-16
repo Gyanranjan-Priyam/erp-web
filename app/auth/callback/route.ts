@@ -57,7 +57,7 @@ export async function GET() {
         redirectPath = "/admin";
     } else if (user.teacher || teacherByEmail) {
         hasValidRole = true;
-        redirectPath = "/faculty";
+        redirectPath = "/teacher";
     } else if (user.student || studentByEmail) {
         hasValidRole = true;
         redirectPath = "/students";

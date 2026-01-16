@@ -155,6 +155,7 @@ model Subject {
 model Teacher {
   id           String @id @default(uuid())
   userId       String @unique
+  facultyId    String @unique
   name         String
   phone        String?
   departmentId String
