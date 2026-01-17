@@ -150,6 +150,23 @@ export default function Faculties() {
     router.push(`/admin/faculties/${faculty.facultyId}`)
   }
 
+  // Handle optimistic add
+  const handleOptimisticAdd = (newFaculty: Partial<Faculty>) => {
+    setFaculties((prev) => [newFaculty as Faculty, ...prev])
+  }
+
+  // Handle optimistic update - replace temp entry with real data
+  const handleOptimisticUpdate = (tempId: string, realFaculty: Faculty) => {
+    setFaculties((prev) => 
+      prev.map(f => f.id === tempId ? realFaculty : f)
+    )
+  }
+
+  // Handle optimistic remove - silently remove failed entry
+  const handleOptimisticRemove = (tempId: string) => {
+    setFaculties((prev) => prev.filter(f => f.id !== tempId))
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
@@ -248,6 +265,7 @@ export default function Faculties() {
                 <TableRow>
                   <TableHead>FACULTY</TableHead>
                   <TableHead>FACULTY ID</TableHead>
+                  <TableHead>DESIGNATION</TableHead>
                   <TableHead>DEPARTMENT</TableHead>
                   <TableHead>SUBJECTS ASSIGNED</TableHead>
                   <TableHead>STATUS</TableHead>
@@ -268,6 +286,9 @@ export default function Faculties() {
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-24" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-4 w-32" />
                     </TableCell>
                     <TableCell>
                       <Skeleton className="h-4 w-32" />
@@ -294,6 +315,7 @@ export default function Faculties() {
                 <TableRow>
                   <TableHead>FACULTY</TableHead>
                   <TableHead>FACULTY ID</TableHead>
+                  <TableHead>DESIGNATION</TableHead>
                   <TableHead>DEPARTMENT</TableHead>
                   <TableHead>SUBJECTS ASSIGNED</TableHead>
                   <TableHead>STATUS</TableHead>
@@ -303,7 +325,7 @@ export default function Faculties() {
               <TableBody>
                 {filteredFaculties.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-32">
+                    <TableCell colSpan={7} className="text-center h-32">
                       <p className="text-muted-foreground">
                         {searchQuery || selectedDepartment !== "all"
                           ? "No faculties found matching your filters"
@@ -333,6 +355,25 @@ export default function Faculties() {
                         <span className="font-mono text-sm">
                           {faculty.facultyId}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {faculty.designations && faculty.designations.length > 0 ? (
+                            faculty.designations.map((designation, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {designation}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Not assigned
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">{faculty.department.name}</span>
@@ -428,6 +469,9 @@ export default function Faculties() {
         departments={departments}
         subjects={subjects}
         onSuccess={fetchData}
+        onOptimisticAdd={handleOptimisticAdd}
+        onOptimisticUpdate={handleOptimisticUpdate}
+        onOptimisticRemove={handleOptimisticRemove}
       />
 
       <DeleteFacultyDialog

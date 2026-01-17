@@ -55,6 +55,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
 
 interface Subject {
   id: string
@@ -74,6 +83,13 @@ interface Department {
     students: number
     teachers: number
     subjects: number
+  }
+  pagination?: {
+    page: number
+    limit: number
+    totalSubjects: number
+    totalPages: number
+    hasMore: boolean
   }
 }
 
@@ -95,17 +111,20 @@ const DepartmentDetailPage = () => {
     semester: "",
   })
   const [submitting, setSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [paginationLoading, setPaginationLoading] = useState(false)
+  const [subjectsCache, setSubjectsCache] = useState<Map<string, { subjects: Subject[], pagination: any, count: number, timestamp: number }>>(new Map())
 
-  useEffect(() => {
-    if (departmentCode) {
-      fetchDepartment()
-    }
-  }, [departmentCode])
-
-  const fetchDepartment = async () => {
+  const fetchDepartment = React.useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/departments/by-code/${departmentCode}`)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        year: selectedYear,
+      })
+      const response = await fetch(`/api/departments/by-code/${departmentCode}?${params}`)
       
       if (!response.ok) {
         throw new Error("Failed to fetch department")
@@ -120,25 +139,103 @@ const DepartmentDetailPage = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [departmentCode, currentPage, itemsPerPage, selectedYear, router])
+
+  const fetchSubjects = React.useCallback(async () => {
+    // Create cache key based on page and filter
+    const cacheKey = `${currentPage}-${selectedYear}`
+    
+    // Check if we have cached data for this page
+    const cached = subjectsCache.get(cacheKey)
+    if (cached) {
+      // Use cached data instantly without showing loading state
+      setDepartment(prev => prev ? {
+        ...prev,
+        subjects: cached.subjects,
+        pagination: cached.pagination,
+        _count: {
+          ...prev._count,
+          subjects: cached.count
+        }
+      } : null)
+      return
+    }
+
+    // Only show loading if we need to fetch new data
+    setPaginationLoading(true)
+    
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        year: selectedYear,
+      })
+      const response = await fetch(`/api/departments/by-code/${departmentCode}?${params}`)
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch subjects")
+      }
+      
+      const data = await response.json()
+      
+      // Store in cache
+      setSubjectsCache(prev => {
+        const newCache = new Map(prev)
+        newCache.set(cacheKey, {
+          subjects: data.subjects,
+          pagination: data.pagination,
+          count: data._count.subjects,
+          timestamp: Date.now()
+        })
+        return newCache
+      })
+      
+      // Only update subjects and pagination data, not the whole department
+      setDepartment(prev => prev ? {
+        ...prev,
+        subjects: data.subjects,
+        pagination: data.pagination,
+        _count: {
+          ...prev._count,
+          subjects: data._count.subjects
+        }
+      } : null)
+    } catch (error) {
+      console.error("Error fetching subjects:", error)
+      toast.error("Failed to load subjects")
+    } finally {
+      setPaginationLoading(false)
+    }
+  }, [departmentCode, currentPage, itemsPerPage, selectedYear, subjectsCache])
+
+  useEffect(() => {
+    if (departmentCode) {
+      fetchDepartment()
+    }
+  }, [departmentCode, fetchDepartment])
+
+  useEffect(() => {
+    if (departmentCode && department) {
+      fetchSubjects()
+    }
+  }, [currentPage, selectedYear, departmentCode, department, fetchSubjects])
 
   // Calculate year from semester (assuming 2 semesters per year)
   const getSemesterYear = (semester: number) => {
     return Math.ceil(semester / 2)
   }
 
-  // Filter subjects based on selected year
-  const filteredSubjects = department?.subjects.filter(subject => {
-    if (selectedYear === "all") return true
-    const year = getSemesterYear(subject.semester)
-    return year.toString() === selectedYear
-  }) || []
+  // Use subjects directly from server (already filtered)
+  const filteredSubjects = department?.subjects || []
 
-  // Get unique years from subjects
-  const availableYears = department?.subjects
-    ? Array.from(new Set(department.subjects.map(s => getSemesterYear(s.semester))))
-        .sort((a, b) => a - b)
-    : []
+  // Get unique years (always show 1-4 for consistency)
+  const availableYears = [1, 2, 3, 4]
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year)
+    setCurrentPage(1) // Reset to first page when filter changes
+    setSubjectsCache(new Map()) // Clear cache when filter changes
+  }
 
   const handleEditClick = (subject: Subject) => {
     setEditSubject(subject)
@@ -174,22 +271,29 @@ const DepartmentDetailPage = () => {
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to update subject")
+        let errorMessage = "Failed to update subject"
+        try {
+          const data = await response.json()
+          errorMessage = data.error || errorMessage
+        } catch {
+          // If JSON parsing fails, try to get text or use status text
+          try {
+            const text = await response.text()
+            errorMessage = text || response.statusText || errorMessage
+          } catch {
+            errorMessage = `${response.status}: ${response.statusText || errorMessage}`
+          }
+        }
+        throw new Error(errorMessage)
       }
 
       const updatedSubject = await response.json()
 
-      // Update local state without refetching
-      setDepartment(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          subjects: prev.subjects.map(s => 
-            s.id === updatedSubject.id ? updatedSubject : s
-          )
-        }
-      })
+      // Clear cache to refetch updated data
+      setSubjectsCache(new Map())
+      
+      // Refetch to get updated data
+      await fetchDepartment()
 
       toast.success("Subject updated successfully")
       setEditSubject(null)
@@ -211,22 +315,27 @@ const DepartmentDetailPage = () => {
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Failed to delete subject")
-      }
-
-      // Update local state without refetching
-      setDepartment(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          subjects: prev.subjects.filter(s => s.id !== deleteSubject.id),
-          _count: {
-            ...prev._count,
-            subjects: prev._count.subjects - 1
+        let errorMessage = "Failed to delete subject"
+        try {
+          const data = await response.json()
+          errorMessage = data.error || errorMessage
+        } catch {
+          // If JSON parsing fails, try to get text or use status text
+          try {
+            const text = await response.text()
+            errorMessage = text || response.statusText || errorMessage
+          } catch {
+            errorMessage = `${response.status}: ${response.statusText || errorMessage}`
           }
         }
-      })
+        throw new Error(errorMessage)
+      }
+
+      // Clear cache to refetch updated data
+      setSubjectsCache(new Map())
+      
+      // Refetch to get updated data
+      await fetchDepartment()
 
       toast.success("Subject deleted successfully")
       setDeleteSubject(null)
@@ -352,8 +461,8 @@ const DepartmentDetailPage = () => {
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-full sm:w-[180px]">
+              <Select value={selectedYear} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-full sm:w-45">
                   <SelectValue placeholder="Select Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -376,7 +485,7 @@ const DepartmentDetailPage = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0 sm:p-6">
-          {filteredSubjects.length === 0 ? (
+          {filteredSubjects.length === 0 && !paginationLoading ? (
             <div className="text-center py-10 text-sm sm:text-base text-muted-foreground">
               {selectedYear === "all" 
                 ? "No subjects found for this department"
@@ -388,20 +497,29 @@ const DepartmentDetailPage = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[80px]">Sl No</TableHead>
-                    <TableHead className="min-w-[200px]">Subject Name</TableHead>
-                    <TableHead className="min-w-[120px]">Subject Code</TableHead>
-                    <TableHead className="min-w-[100px]">Category</TableHead>
-                    <TableHead className="min-w-[120px]">Semester</TableHead>
-                    <TableHead className="min-w-[80px]">Year</TableHead>
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="min-w-20">Sl No</TableHead>
+                    <TableHead className="min-w-50">Subject Name</TableHead>
+                    <TableHead className="min-w-30">Subject Code</TableHead>
+                    <TableHead className="min-w-25">Category</TableHead>
+                    <TableHead className="min-w-30">Semester</TableHead>
+                    <TableHead className="min-w-20">Year</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubjects.map((subject, index) => (
+                  {paginationLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-32 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                          <span className="text-sm text-muted-foreground">Loading subjects...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredSubjects.map((subject, index) => (
                     <TableRow key={subject.id}>
                       <TableCell className="font-medium text-sm sm:text-base">
-                        {index + 1}
+                        {(currentPage - 1) * itemsPerPage + index + 1}
                       </TableCell>
                       <TableCell className="font-medium text-sm sm:text-base">
                         {subject.name}
@@ -454,6 +572,72 @@ const DepartmentDetailPage = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          
+          {/* Pagination Info and Controls */}
+          {department?.pagination && department.pagination.totalPages > 1 && (
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground">
+                <div>
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, department.pagination.totalSubjects)} of {department.pagination.totalSubjects} subjects
+                </div>
+                <div>
+                  Page {currentPage} of {department.pagination.totalPages}
+                </div>
+              </div>
+              
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => !paginationLoading && setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className={currentPage === 1 || paginationLoading ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: department.pagination.totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      // Show first page, last page, current page, and pages around current
+                      return (
+                        page === 1 ||
+                        page === department.pagination?.totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      )
+                    })
+                    .map((page, idx, arr) => {
+                      // Add ellipsis if there's a gap
+                      const showEllipsisBefore = idx > 0 && arr[idx - 1] !== page - 1
+                      
+                      return (
+                        <React.Fragment key={page}>
+                          {showEllipsisBefore && (
+                            <PaginationItem>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          )}
+                          <PaginationItem>
+                            <PaginationLink
+                              onClick={() => !paginationLoading && setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className={paginationLoading ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        </React.Fragment>
+                      )
+                    })
+                  }
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => !paginationLoading && setCurrentPage(prev => Math.min(department.pagination?.totalPages || 1, prev + 1))}
+                      className={currentPage === department.pagination?.totalPages || paginationLoading ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>

@@ -32,6 +32,9 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
+                code: true,
+                category: true,
+                semester: true,
               },
             },
           },
@@ -65,7 +68,7 @@ export async function PUT(
     await requireRole("ADMIN")
     const { id } = await params
     const body = await request.json()
-    const { facultyId, name, phone, departmentId, subjectIds } = body
+    const { facultyId, name, phone, departmentId, subjectIds, designations } = body
 
     // Check if faculty exists
     const existingFaculty = await prisma.teacher.findUnique({
@@ -102,6 +105,7 @@ export async function PUT(
           name,
           phone: phone || null,
           departmentId,
+          designations: designations !== undefined ? designations : existingFaculty.designations,
         },
       })
 

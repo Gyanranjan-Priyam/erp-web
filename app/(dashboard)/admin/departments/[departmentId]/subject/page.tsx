@@ -638,12 +638,12 @@ const AddSubjectPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[200px]">Subject Name</TableHead>
-                  <TableHead className="min-w-[100px]">Code</TableHead>
-                  <TableHead className="min-w-[120px]">Category</TableHead>
-                  <TableHead className="min-w-[80px]">Year</TableHead>
-                  <TableHead className="min-w-[100px]">Semester</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
+                  <TableHead className="min-w-50">Subject Name</TableHead>
+                  <TableHead className="min-w-25">Code</TableHead>
+                  <TableHead className="min-w-30">Category</TableHead>
+                  <TableHead className="min-w-20">Year</TableHead>
+                  <TableHead className="min-w-25">Semester</TableHead>
+                  <TableHead className="w-25">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

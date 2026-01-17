@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     await requireRole("ADMIN")
 
     const body = await request.json()
-    const { facultyId, name, email, phone, departmentId, subjectIds } = body
+    const { facultyId, name, email, phone, departmentId, subjectIds, designations } = body
 
     // Validate required fields
     if (!facultyId || !name || !email || !departmentId) {
@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
           name,
           phone: phone || null,
           departmentId,
+          designations: designations || [],
         },
         include: {
           user: {

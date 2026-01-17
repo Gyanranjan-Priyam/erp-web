@@ -5,6 +5,7 @@ export interface Faculty {
   name: string
   phone: string | null
   departmentId: string
+  designations: string[]
   createdAt: string
   user: {
     email: string
@@ -20,6 +21,8 @@ export interface Faculty {
     subject: {
       id: string
       name: string
+      code?: string
+      category?: string
       semester?: number
     }
   }[]
@@ -32,6 +35,7 @@ export interface FacultyFormData {
   phone?: string
   departmentId: string
   subjectIds: string[]
+  designations: string[]
 }
 
 export interface Department {
@@ -44,3 +48,13 @@ export interface Subject {
   name: string
   departmentId: string
 }
+
+export const DESIGNATIONS = [
+  "Asst. Professor",
+  "Professor",
+  "Associate Professor",
+  "Lab Assistant",
+  "Prof. In Charge"
+] as const
+
+export type Designation = typeof DESIGNATIONS[number]

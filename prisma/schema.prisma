@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  directUrl = env("DATABASE_URL")
 }
 
 // =========================
@@ -29,6 +29,32 @@ enum PaymentStatus {
   PENDING
   PAID
   FAILED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum SessionType {
+  LECTURE
+  LAB
+  TUTORIAL
+}
+
+enum ScheduleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum TimetableType {
+  REGULAR
+  EXAM
+  SPECIAL
 }
 
 // =========================
@@ -131,6 +157,7 @@ model Department {
   students  Student[]
   teachers  Teacher[]
   admissions AdmissionApplication[]
+  schedules Schedule[]
 
   createdAt DateTime @default(now())
 }
@@ -147,6 +174,7 @@ model Subject {
   teachers     TeacherSubject[]
   marks        InternalMark[]
   attendance   Attendance[]
+  schedules    Schedule[]
 
   createdAt    DateTime @default(now())
 }
@@ -162,12 +190,14 @@ model Teacher {
   name         String
   phone        String?
   departmentId String
+  designations String[] @default([])
 
   user         User       @relation(fields: [userId], references: [id])
   department   Department @relation(fields: [departmentId], references: [id])
 
   subjects     TeacherSubject[]
   attendance   Attendance[]
+  schedules    Schedule[]
 
   createdAt    DateTime @default(now())
 }
@@ -276,4 +306,85 @@ model AdmissionApplication {
   department    Department @relation(fields: [departmentId], references: [id])
 
   createdAt     DateTime @default(now())
+}
+
+// =========================
+// ROOMS / CLASSROOMS
+// =========================
+
+model Room {
+  id        String @id @default(uuid())
+  name      String @unique
+  type      String // CLASSROOM, LAB, HALL, etc.
+  capacity  Int
+
+  createdAt DateTime @default(now())
+}
+
+// =========================
+// CLASS SCHEDULE / TIMETABLE
+// =========================
+
+model Schedule {
+  id            String         @id @default(uuid())
+  academicYear  String         // "2025-2026"
+  semester      Int
+  departmentId  String
+  classSection  String         // "A", "B", "C", etc.
+  
+  day           DayOfWeek
+  timeSlotId    String?        // Optional - only used when not using custom time
+  startTime     String         // Required - either from TimeSlot or custom
+  endTime       String         // Required - either from TimeSlot or custom
+  
+  subjectId     String
+  teacherId     String
+  roomId        String         // Room number/identifier (e.g., "101", "A-204", "Lab-3")
+  
+  sessionType   SessionType    @default(LECTURE)
+  duration      Int            @default(1) // Number of slots
+  isMandatory   Boolean        @default(true)
+  
+  repeatWeekly  Boolean        @default(true)
+  effectiveFrom DateTime?
+  effectiveTill DateTime?
+  
+  status        ScheduleStatus @default(DRAFT)
+  timetableType TimetableType  @default(REGULAR)
+
+  department    Department     @relation(fields: [departmentId], references: [id])
+  subject       Subject        @relation(fields: [subjectId], references: [id])
+  teacher       Teacher        @relation(fields: [teacherId], references: [id])
+  timeSlot      TimeSlotConfig? @relation(fields: [timeSlotId], references: [slotId])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([roomId, day, startTime, endTime, academicYear, semester])
+  @@unique([teacherId, day, startTime, endTime, academicYear, semester])
+  @@unique([departmentId, classSection, day, startTime, endTime, academicYear, semester])
+  @@index([academicYear, semester, departmentId, classSection])
+  @@index([day, startTime])
+}
+
+// =========================
+// TIME SLOT CONFIGURATION
+// =========================
+
+model TimeSlotConfig {
+  id        String     @id @default(uuid())
+  slotId    String     @unique // "1", "2", "break", etc.
+  startTime String     // "09:00"
+  endTime   String     // "10:00"
+  label     String     // "09:00 - 10:00"
+  isBreak   Boolean    @default(false)
+  order     Int        // For sorting
+  isActive  Boolean    @default(true)
+
+  schedules Schedule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
 }

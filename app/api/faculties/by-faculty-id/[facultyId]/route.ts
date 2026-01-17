@@ -33,6 +33,8 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
+                code: true,
+                category: true,
                 semester: true,
               },
             },
