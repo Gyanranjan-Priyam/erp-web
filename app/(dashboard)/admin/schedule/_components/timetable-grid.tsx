@@ -19,6 +19,20 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
+// Generate short form from subject name
+const getSubjectShortForm = (subjectName: string | undefined): string => {
+  if (!subjectName) return "N/A"
+  
+  // Replace "and" with "&"
+  const processed = subjectName.replace(/\band\b/gi, "&")
+  
+  // Split by spaces and take first letter of each word
+  return processed
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase())
+    .join("")
+}
+
 interface TimetableGridProps {
   schedules: ScheduleSlot[]
   timeSlots: TimeSlot[]
@@ -343,11 +357,11 @@ export function TimetableGrid({
         }}
         role="button"
         tabIndex={0}
-        aria-label={`Edit ${schedule.subjectCode || schedule.subjectName} class with ${schedule.teacherName} in ${schedule.roomName}`}
+        aria-label={`Edit ${getSubjectShortForm(schedule.subjectName)} class with ${schedule.teacherName} in ${schedule.roomName}`}
       >
         <div className="flex items-start justify-between gap-1">
           <p className="font-semibold text-sm line-clamp-1">
-            {schedule.subjectCode || schedule.subjectName}
+            {getSubjectShortForm(schedule.subjectName)}
           </p>
           <div className="flex gap-1 items-center">
             <Badge
@@ -392,13 +406,13 @@ export function TimetableGrid({
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-muted">
-                  <th className="border p-3 text-left font-semibold min-w-[120px] sticky left-0 bg-muted z-10">
+                  <th className="border p-3 text-left font-semibold min-w-30 sticky left-0 bg-muted z-10">
                     Time
                   </th>
                   {DAYS_OF_WEEK.map((day) => (
                     <th
                       key={day}
-                      className="border p-3 text-center font-semibold min-w-[200px]"
+                      className="border p-3 text-center font-semibold min-w-50"
                     >
                       {day.charAt(0) + day.slice(1).toLowerCase()}
                     </th>
@@ -490,13 +504,13 @@ export function TimetableGrid({
                           }
                         }}
                         disabled={readOnly}
-                        aria-label={`Edit ${schedule.subjectCode || schedule.subjectName} on ${schedule.day}`}
+                        aria-label={`Edit ${getSubjectShortForm(schedule.subjectName)} on ${schedule.day}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold">
-                                {schedule.subjectCode || schedule.subjectName}
+                                {getSubjectShortForm(schedule.subjectName)}
                               </span>
                               <Badge variant="outline" className="text-xs">
                                 {schedule.sessionType}
@@ -561,13 +575,13 @@ export function TimetableGrid({
                           }
                         }}
                         disabled={readOnly}
-                        aria-label={`Edit ${schedule.subjectCode || schedule.subjectName} on ${schedule.day}`}
+                        aria-label={`Edit ${getSubjectShortForm(schedule.subjectName)} on ${schedule.day}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="font-semibold">
-                                {schedule.subjectCode || schedule.subjectName}
+                                {getSubjectShortForm(schedule.subjectName)}
                               </span>
                               <Badge variant="outline" className="text-xs">
                                 {schedule.sessionType}
